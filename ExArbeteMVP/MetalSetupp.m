@@ -8,12 +8,12 @@
 #import "MetalSetupp.h"
 
 #define PRECISION_TYPE float
-#define X_UPPER_LEFT 0.5f
-#define Y_UPPER_LEFT 0.5f
-#define DELTA_PIXEL 0.001f
+#define X_UPPER_LEFT -2
+#define Y_UPPER_LEFT 2
+#define DELTA_PIXEL 0.002f
 
-const unsigned int width = 10;
-const unsigned int height = 10;
+const unsigned int width = 2000;
+const unsigned int height = 2000;
 
 const unsigned int arrayLength = width * height;
 const unsigned int bufferSize = arrayLength * sizeof(int);
@@ -27,10 +27,10 @@ const unsigned int bufferSize = arrayLength * sizeof(int);
     
     id<MTLBuffer> _mBufferConstI;
     id<MTLBuffer> _mBufferConstF;
-    id<MTLBuffer> _mBufferA;
+    //id<MTLBuffer> _mBufferA;
     
     id<MTLBuffer> _mBufferOut;
-    id<MTLTexture> _mTextureOut;
+    //id<MTLTexture> _mTextureOut;
     
 }
 
@@ -69,16 +69,15 @@ const unsigned int bufferSize = arrayLength * sizeof(int);
 }
 
 - (void) prepareData{
-    _mBufferA = [_mDevice newBufferWithLength:bufferSize options:MTLResourceStorageModeShared];
+    //_mBufferA = [_mDevice newBufferWithLength:bufferSize options:MTLResourceStorageModeShared];
     
     _mBufferConstI = [_mDevice newBufferWithLength:2 * sizeof(int) options:MTLResourceStorageModeShared];
     _mBufferConstF = [_mDevice newBufferWithLength:3 * sizeof(PRECISION_TYPE) options:MTLResourceStorageModeShared];
-    _mBufferOut = [_mDevice newBufferWithLength:4 * width * height options:MTLResourceStorageModeShared];
+    _mBufferOut = [_mDevice newBufferWithLength:bufferSize options:MTLResourceStorageModeShared];
     
-    MTLTextureDescriptor* descriptor = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatRGBA8Uint width:width height:height mipmapped:false];
+    //MTLTextureDescriptor* descriptor = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatRGBA8Uint width:width height:height mipmapped:false];
     
-    _mTextureOut = [_mDevice newTextureWithDescriptor:descriptor];
-    
+    //_mTextureOut = [_mBufferOut newTextureWithDescriptor:descriptor offset:0 bytesPerRow:4 * width];
     
     
     int* constIP = _mBufferConstI.contents;
@@ -89,6 +88,8 @@ const unsigned int bufferSize = arrayLength * sizeof(int);
     constFP[0] = X_UPPER_LEFT;
     constFP[1] = Y_UPPER_LEFT;
     constFP[2] = DELTA_PIXEL;
+    
+    printf("%f\n", constFP[2]);
     
 }
 
@@ -107,14 +108,26 @@ const unsigned int bufferSize = arrayLength * sizeof(int);
     
     [commandBuffer waitUntilCompleted];
     
-    [self verifyResults];
+    //[self verifyResults];
+    
+    /*
+    
+    int* a = _mBufferOut.contents;
+    
+    for(int i = 0; i < arrayLength; i++){
+        printf("%d: %d\n", i, a[i]);
+    }
+     
+    */
+    
+    [self saveImage];
 }
 
 - (void)encodeAddCommand:(id<MTLComputeCommandEncoder>_Nonnull)computeEncoder {
     [computeEncoder setComputePipelineState:_mAddFunctionPSO];
     [computeEncoder setBuffer:_mBufferConstI offset:0 atIndex:0];
     [computeEncoder setBuffer:_mBufferConstF offset:0 atIndex:1];
-    [computeEncoder setBuffer:_mBufferA offset:0 atIndex:2];
+    [computeEncoder setBuffer:_mBufferOut offset:0 atIndex:2];
     
     MTLSize gridSize = MTLSizeMake(arrayLength, 1, 1);
     
@@ -127,37 +140,64 @@ const unsigned int bufferSize = arrayLength * sizeof(int);
     [computeEncoder dispatchThreads:gridSize threadsPerThreadgroup:thredgroupSize];
 }
 
-- (void) generateRandomFloatData: (id<MTLBuffer>_Nonnull) buffer {
-    float* dataPtr = buffer.contents;
+- (void) saveImage{
     
-    for(unsigned long i = 0; i < arrayLength; i++){
-        dataPtr[i] = (float)rand()/(float)(RAND_MAX);
+    NSArray* path = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
+    NSString* filePath = [[path objectAtIndex:0] stringByAppendingPathComponent:@"image.png"];
+    
+    //int* data = malloc(bufferSize);
+    
+    int* data = _mBufferOut.contents;
+    
+    if(!data){
+        NSLog(@"faild to allocate memory");
+        return;
     }
-}
-
-- (void) saveImage: (id<MTLTexture>) texture {
-    unsigned long width = texture.width;
-    unsigned long height = texture.height;
-    int pixlesByteCount = 4 * 32;
-    unsigned long imageBytePerRow = width * pixlesByteCount;
-    unsigned long imageByteCount = imageBytePerRow * height;
-    int* imageBytes = malloc(imageByteCount);
     
-    [texture getBytes:imageBytes bytesPerRow:imageBytePerRow fromRegion:MTLRegionMake2D(0, 0, width, height) mipmapLevel:0];
+    //data[0] = 0xffffffff;
+    //data[1] = 0xff00ff00;
+    //data[2] = 0xffff0000;
     
+    //data[arrayLength - 1] = 0xffff0000;
     
+    CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
     
-    free(imageBytes);
+    CGContextRef context = CGBitmapContextCreate(data, width, height, 8, width * 4, colorSpace, kCGImageAlphaPremultipliedLast);
     
+    CGColorSpaceRelease(colorSpace);
+    
+    if(!context){
+        NSLog(@"faild context");
+        free(data);
+        return;
+    }
+    
+    CGImageRef cgImage = CGBitmapContextCreateImage(context);
+    CGContextRelease(context);
+    
+    if(!cgImage){
+        NSLog(@"faild cgImage");
+        return;
+    }
+    
+    CFURLRef url = (__bridge CFURLRef)[NSURL fileURLWithPath:filePath];
+    CGImageDestinationRef destination = CGImageDestinationCreateWithURL(url, kUTTypePNG, 1, NULL);
+    
+    CGImageDestinationAddImage(destination, cgImage, nil);
+    CGImageDestinationFinalize(destination);
+    
+    CFRelease(destination);
+    printf("done\n");
 }
 
 - (void) verifyResults{
-    float* a = _mBufferA.contents;
+    short* a = _mBufferOut.contents;
     
-    for(unsigned long i = 0; i < arrayLength; i++){
-        printf("i = %lu: thred = %f\n", i, a[i]);
+    for(int i = 0; i < arrayLength; i++){
+        NSLog(@"%d: %d", i, a[i]);
+        
     }
-    printf("Compute resulte as expected\n");
+    //printf("Compute resulte as expected\n");
 }
 
 @end

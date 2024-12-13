@@ -7,6 +7,11 @@
 
 #import <Foundation/Foundation.h>
 #import "Metal/Metal.h"
+#import "CoreGraphics/CoreGraphics.h"
+#import "CoreServices/CoreServices.h"
+#import "ImageIO/ImageIO.h"
+//#import "UniformTypeIdentifiers/UniformTypeIdentifiers.h"
+
 
 
 NS_ASSUME_NONNULL_BEGIN
