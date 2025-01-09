@@ -32,29 +32,27 @@ kernel void calculate_madelbrot(
     float Cx = fConst[0] + (px * fConst[2]); // x position of the picle in mandelbrot set
     float Cy = fConst[1] - (py * fConst[2]); // y position of the pixle in mandelbrot set
     
+    int maxItiration = 10000;
+    
     
     out[index] = 0xff000000;
     
-    /*
-    if(Cx == 0 && Cy == 0){
-        out[index] = 0xff00ff00;
-        return;
-    }
-    //*/
     
-    //*
-    
-    for(int i = 0; i < 10000; i++){
+    for(int i = 0; i < maxItiration; i++){
         float xtemp = (x * x) - (y * y) + Cx;
         float ytemp = 2 * x * y + Cy;
         x = xtemp;
         y = ytemp;
         if((x * x) + (y * y) > 4){
-            out[index] = 0xffffffff;
+            float pros = (float)i / maxItiration;
+            int red = pros * 255;
+            int green = (red * 10) % 255;
+            int blue = (green * 10) % 255;
+            green <<= 8;
+            blue <<= 16;
+            out[index] = 0xff000000 | blue | green | red;
             return;
         }
     }
-    //*/
-    
     
 }

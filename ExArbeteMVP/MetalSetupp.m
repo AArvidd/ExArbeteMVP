@@ -8,15 +8,17 @@
 #import "MetalSetupp.h"
 
 #define PRECISION_TYPE float
-#define X_UPPER_LEFT -2
-#define Y_UPPER_LEFT 2
-#define DELTA_PIXEL 0.002f
 
-const unsigned int width = 2000;
-const unsigned int height = 2000;
+float X = -0.7498;
+float Y = 0.02;
 
-const unsigned int arrayLength = width * height;
-const unsigned int bufferSize = arrayLength * sizeof(int);
+float width = 0.0001;
+
+const unsigned int pWidth = 10000;
+const unsigned int pHeight = 10000;
+
+const unsigned long arrayLength = pWidth * pHeight;
+const unsigned long bufferSize = arrayLength * sizeof(int);
 
 @implementation MetalSetupp{
     id<MTLDevice> _mDevice;
@@ -27,10 +29,8 @@ const unsigned int bufferSize = arrayLength * sizeof(int);
     
     id<MTLBuffer> _mBufferConstI;
     id<MTLBuffer> _mBufferConstF;
-    //id<MTLBuffer> _mBufferA;
     
     id<MTLBuffer> _mBufferOut;
-    //id<MTLTexture> _mTextureOut;
     
 }
 
@@ -69,27 +69,25 @@ const unsigned int bufferSize = arrayLength * sizeof(int);
 }
 
 - (void) prepareData{
-    //_mBufferA = [_mDevice newBufferWithLength:bufferSize options:MTLResourceStorageModeShared];
+    
+    PRECISION_TYPE deltaPixle = width / pWidth;
+    
+    PRECISION_TYPE upperLeftX = X - (pWidth / 2) * deltaPixle;
+    PRECISION_TYPE upperLEftY = Y + (pHeight / 2) * deltaPixle;
     
     _mBufferConstI = [_mDevice newBufferWithLength:2 * sizeof(int) options:MTLResourceStorageModeShared];
     _mBufferConstF = [_mDevice newBufferWithLength:3 * sizeof(PRECISION_TYPE) options:MTLResourceStorageModeShared];
     _mBufferOut = [_mDevice newBufferWithLength:bufferSize options:MTLResourceStorageModeShared];
     
-    //MTLTextureDescriptor* descriptor = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatRGBA8Uint width:width height:height mipmapped:false];
-    
-    //_mTextureOut = [_mBufferOut newTextureWithDescriptor:descriptor offset:0 bytesPerRow:4 * width];
-    
     
     int* constIP = _mBufferConstI.contents;
     PRECISION_TYPE* constFP = _mBufferConstF.contents;
-    constIP[0] = width;
-    constIP[1] = height;
+    constIP[0] = pWidth;
+    constIP[1] = pHeight;
     
-    constFP[0] = X_UPPER_LEFT;
-    constFP[1] = Y_UPPER_LEFT;
-    constFP[2] = DELTA_PIXEL;
-    
-    printf("%f\n", constFP[2]);
+    constFP[0] = upperLeftX;
+    constFP[1] = upperLEftY;
+    constFP[2] = deltaPixle;
     
 }
 
@@ -145,8 +143,6 @@ const unsigned int bufferSize = arrayLength * sizeof(int);
     NSArray* path = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
     NSString* filePath = [[path objectAtIndex:0] stringByAppendingPathComponent:@"image.png"];
     
-    //int* data = malloc(bufferSize);
-    
     int* data = _mBufferOut.contents;
     
     if(!data){
@@ -162,7 +158,7 @@ const unsigned int bufferSize = arrayLength * sizeof(int);
     
     CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
     
-    CGContextRef context = CGBitmapContextCreate(data, width, height, 8, width * 4, colorSpace, kCGImageAlphaPremultipliedLast);
+    CGContextRef context = CGBitmapContextCreate(data, pWidth, pHeight, 8, pWidth * 4, colorSpace, kCGImageAlphaPremultipliedLast);
     
     CGColorSpaceRelease(colorSpace);
     
