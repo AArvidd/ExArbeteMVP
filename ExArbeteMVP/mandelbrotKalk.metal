@@ -25,18 +25,18 @@ kernel void calculate_madelbrot(
      
     
     uint px = index % iConst[0]; // x position of the pixle in image
-    uint py = index / iConst[1]; // y position of the pixle in image
+    uint py = index / iConst[0]; // y position of the pixle in image
     
     float x = 0;
     float y = 0;
-    float Cx = fConst[0] + (px * fConst[2]); // x position of the picle in mandelbrot set
+    float Cx = fConst[0] + (px * fConst[2]); // x position of the pixle in mandelbrot set
     float Cy = fConst[1] - (py * fConst[2]); // y position of the pixle in mandelbrot set
     
-    int maxItiration = 10000;
+    int maxItiration = 2000;
     
     
     out[index] = 0xff000000;
-    
+
     
     for(int i = 0; i < maxItiration; i++){
         float xtemp = (x * x) - (y * y) + Cx;

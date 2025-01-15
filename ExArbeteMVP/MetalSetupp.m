@@ -7,15 +7,13 @@
 
 #import "MetalSetupp.h"
 
-#define PRECISION_TYPE float
+float X = -0.74364;
+float Y = 0.131827;
 
-float X = -0.7498;
-float Y = 0.02;
+float width = 0.000012;
 
-float width = 0.0001;
-
-const unsigned int pWidth = 10000;
-const unsigned int pHeight = 10000;
+const unsigned int pWidth = 3840;
+const unsigned int pHeight = 2160;
 
 const unsigned long arrayLength = pWidth * pHeight;
 const unsigned long bufferSize = arrayLength * sizeof(int);
@@ -70,23 +68,23 @@ const unsigned long bufferSize = arrayLength * sizeof(int);
 
 - (void) prepareData{
     
-    PRECISION_TYPE deltaPixle = width / pWidth;
+    float deltaPixle = width / pWidth;
     
-    PRECISION_TYPE upperLeftX = X - (pWidth / 2) * deltaPixle;
-    PRECISION_TYPE upperLEftY = Y + (pHeight / 2) * deltaPixle;
+    float upperLeftX = X - ((pWidth * deltaPixle) / 2);
+    float upperLeftY = Y + ((pHeight * deltaPixle) / 2);
     
     _mBufferConstI = [_mDevice newBufferWithLength:2 * sizeof(int) options:MTLResourceStorageModeShared];
-    _mBufferConstF = [_mDevice newBufferWithLength:3 * sizeof(PRECISION_TYPE) options:MTLResourceStorageModeShared];
+    _mBufferConstF = [_mDevice newBufferWithLength:3 * sizeof(float) options:MTLResourceStorageModeShared];
     _mBufferOut = [_mDevice newBufferWithLength:bufferSize options:MTLResourceStorageModeShared];
     
     
     int* constIP = _mBufferConstI.contents;
-    PRECISION_TYPE* constFP = _mBufferConstF.contents;
+    float* constFP = _mBufferConstF.contents;
     constIP[0] = pWidth;
     constIP[1] = pHeight;
     
     constFP[0] = upperLeftX;
-    constFP[1] = upperLEftY;
+    constFP[1] = upperLeftY;
     constFP[2] = deltaPixle;
     
 }
